@@ -1,6 +1,8 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
+from datetime import datetime
+from io import BytesIO
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -80,20 +82,35 @@ def delete_conversation(thread_id):
         cursor.close()
         conn.close()
 
-def save_uploaded_file(file_name, file):
-    """Save an uploaded file to the uploaded_files table in the database."""
+def save_uploaded_file(file, directory='./uploaded_files/'):
+    """Save the uploaded file locally and store its metadata in the database."""
+    # Ensure the directory exists
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    # Save the file locally
+    file_path = os.path.join(directory, file.name)
+    with open(file_path, "wb") as f:
+        f.write(file.getbuffer())
+    
+    # Save metadata to the database (only file name and path)
     conn = get_db_connection()
     if conn is None:
         return
     
     try:
         cursor = conn.cursor()
-        file_content = file.read()  # Read the file content
-        cursor.execute("INSERT INTO uploaded_files (file_name, file_content) VALUES (%s, %s)", (file_name, file_content))
+        cursor.execute(
+            """
+            INSERT INTO uploaded_files (file_name, file_path, created_at)
+            VALUES (%s, %s, %s)
+            """,
+            (file.name, file_path, datetime.now())
+        )
         conn.commit()
-        print(f"File {file_name} uploaded successfully.")
+        print(f"File {file.name} saved locally and metadata stored in the database.")
     except Exception as e:
-        print(f"Error saving uploaded file: {e}")
+        print(f"Error saving uploaded file metadata: {e}")
     finally:
         cursor.close()
         conn.close()
@@ -116,52 +133,45 @@ def delete_uploaded_file(file_name):
         conn.close()
 
 def fetch_uploaded_files():
-    """Fetch all uploaded files from the uploaded_files table in the database."""
+    """Fetch all uploaded file metadata from the uploaded_files table in the database."""
     conn = get_db_connection()
     if conn is None:
         return []
     
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT file_name FROM uploaded_files")
+        cursor.execute("SELECT file_name, file_path FROM uploaded_files")
         files = cursor.fetchall()
-        
-        # Log the fetched files for debugging
-        print(f"Fetched files: {files}")  # This will help you see what is being returned
-        
-        # If no files were found, return an empty list
-        if not files:
-            print("No files found in the database.")
-            return []
-
-        # Extract file names from the RealDictRow
-        return [file['file_name'] for file in files]  # Use dictionary access
-
+        return files  # Returns a list of dictionaries with file_name and file_path
     except Exception as e:
         print(f"Error fetching uploaded files: {e}")
-        return []  # Return an empty list on error
+        return []
     finally:
         cursor.close()
         conn.close()
 
-def fetch_uploaded_file_content(file_name):
-    """Fetch the content of the uploaded file from the PostgreSQL database."""
-    conn = get_db_connection()
-    if conn is None:
-        return None
+# def fetch_uploaded_file_content(file_name):
+#     """Fetch the content of the uploaded file from the PostgreSQL database."""
+#     conn = get_db_connection()
+#     if conn is None:
+#         return None
 
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT file_content FROM uploaded_files WHERE file_name = %s", (file_name,))
-        file_content = cursor.fetchone()
-        if file_content:
-            return file_content[0]  # Return the content (stored as BLOB/BYTEA in PostgreSQL)
-        else:
-            print(f"No content found for file: {file_name}")
-            return None
-    except Exception as e:
-        print(f"Error fetching file content from database: {e}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute("SELECT file_content FROM uploaded_files WHERE file_name = %s", (file_name,))
+#         result = cursor.fetchone()
+#         if result and 'file_content' in result:
+#             # Parse JSON to get binary data from 'data' array
+#             file_content_json = result['file_content']
+#             data = file_content_json.get('data', [])
+#             file_content_bytes = bytes(data)  # Convert list of integers to bytes
+#             return BytesIO(file_content_bytes)  # Return as BytesIO object for in-memory processing
+#         else:
+#             print(f"No content found for file: {file_name}")
+#             return None
+#     except Exception as e:
+#         print(f"Error fetching file content from database: {e}")
+#         return None
+#     finally:
+#         cursor.close()
+#         conn.close()

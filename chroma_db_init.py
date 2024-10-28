@@ -5,7 +5,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain.schema import Document
-from postgresSQL import fetch_uploaded_file_content
+from postgresSQL import fetch_uploaded_files
+# from postgresSQL import fetch_uploaded_file_content
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 model_name = "intfloat/e5-large-v2"
 
@@ -51,19 +52,24 @@ def push_files_to_chroma(file_names, directory='./uploaded_files/'):
     
     if os.path.exists(PERSIST_DIR):
         for file_name in file_names:
-        # Fetch the file content from the database
-            file_content = fetch_uploaded_file_content(file_name)
-            if not file_content:
-                continue  # Skip if no content is found
-    
-        # Convert the binary content to a file-like object (CSV Loader expects a file path)
-        from io import BytesIO
-        file_like_object = BytesIO(file_content)
-        # Extract text from the file-like object (pass this to your CSVLoader)
-        text = extract_text_from_pdf(file_like_object)  # Use file-like object instead of path
-         # Create a new Document with combined text
-        document = Document(page_content=text, metadata={"file_name": file_name})
-        documents.append(document)
+            # Retrieve file metadata to get the path
+            file_metadata = fetch_uploaded_files()
+            file_path = next((f['file_path'] for f in file_metadata if f['file_name'] == file_name), None)
+
+            if not file_path or not os.path.exists(file_path):
+                print(f"File {file_name} not found in uploaded_files directory.")
+                continue  # Skip if the file doesn't exist
+
+            # Load the CSV content using CSVLoader
+            loader = CSVLoader(file_path=file_path)
+            extracted_documents = loader.load()
+
+            # Combine page contents into a single string if needed
+            text = "\n".join([doc.page_content for doc in extracted_documents])
+
+            # Create a new Document with combined text
+            document = Document(page_content=text, metadata={"file_name": file_name})
+            documents.append(document)
     
     else:
         for file_name in file_names:

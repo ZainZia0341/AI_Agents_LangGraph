@@ -113,10 +113,11 @@ with st.sidebar:
     if st.button("Upload to Database",):
         update_key()
         for file_name in st.session_state['uploaded_files']:
-            save_uploaded_file(file_name, uploaded_file)
+            save_uploaded_file(uploaded_file)
 
         # Refresh the uploader key to reset file uploader widget
         st.session_state['uploaded_files'] = []
+        st.session_state['uploaded_files_db'] = fetch_uploaded_files()
         display_selected_files()
 
     # Display uploaded files from the database
@@ -127,17 +128,19 @@ with st.sidebar:
 
     # Loop through the files and add checkboxes
     if st.session_state['uploaded_files_db']:
-        for i, file_name in enumerate(st.session_state['uploaded_files_db']):
+        for i, file_row in enumerate(st.session_state['uploaded_files_db']):
+            file_name = file_row['file_name']
             cols = st.columns([0.1, 0.7, 0.2])  # Added column for checkboxes
             with cols[0]:
                 # Checkbox to select the file
-                st.session_state['selected_files'][file_name] = st.checkbox("", key=f"select_file_{i}")
+                st.session_state['selected_files'][file_name] = st.checkbox("", key=f"select_file_{i}", label_visibility="collapsed")
             with cols[1]:
                 st.write(file_name)
             with cols[2]:
                 if st.button("❌", key=f"delete_db_file_{i}"):
                     delete_uploaded_file(file_name)
                     st.session_state['uploaded_files_db'].pop(i)
+                    st.session_state['uploaded_files_db'] = fetch_uploaded_files()  # Refresh the list after deletion
 
     # Button to push selected files to RAG
     if st.button("Push to RAG"):
@@ -164,28 +167,33 @@ if 'current_thread_id' in st.session_state and st.session_state['current_thread_
     st.subheader(f"Conversation: {thread_id[:8]}")
 
     # Display messages from the currently active conversation stored in session state
-    for message in st.session_state['conversations'][thread_id]:
-        if 'metadata' in message and 'writes' in message['metadata']:
-            writes = message['metadata']['writes']
-            
+    for message in st.session_state['conversations'].get(thread_id, []):
+        metadata = message.get('metadata', {})
+        writes = metadata.get('writes', {})
+
+        # Check if writes is not None
+        if writes:
             # Display user messages if present
-            if '__start__' in writes and writes['__start__'] is not None:
-                user_messages = writes['__start__'].get('messages', [])
-                for user_msg in user_messages:
+            user_start = writes.get('__start__')
+            if user_start and 'messages' in user_start:
+                for user_msg in user_start['messages']:
                     if isinstance(user_msg, list) and len(user_msg) == 2:
                         role, content = user_msg
-                        content = content if content else "No content available"
+                        content = content or "No content available"
                         with st.chat_message(role):
                             st.write(content)
-            
+
             # Display assistant messages if present
-            if 'agent' in writes and 'messages' in writes['agent']:
-                assistant_messages = writes['agent']['messages']
-                for assistant_msg in assistant_messages:
-                    # Safely extract content
-                    content = assistant_msg['kwargs'].get('content', "No content available")
+            agent_writes = writes.get('agent')
+            if agent_writes and 'messages' in agent_writes:
+                for assistant_msg in agent_writes['messages']:
+                    content = assistant_msg.get('kwargs', {}).get('content', "No content available")
                     with st.chat_message("assistant"):
                         st.write(content)
+        else:
+            # Log or display a message if writes is null, for easier debugging
+            # st.write("No messages available in this entry.")
+            pass
 
 # Handle new messages from the user
 prompt = st.chat_input("Type your message here...")

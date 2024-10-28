@@ -1,0 +1,51 @@
+Date,Transaction_ID,Description,Amount,Account_Balance,Category
+2022-01-01,TXN72127,Dining Out,1459.84,13566.92,Entertainment
+2022-01-02,TXN99324,Gym Membership,1712.26,65950.6,Income
+2022-01-03,TXN34971,Utility Bill,4052.07,38933.27,Income
+2022-01-04,TXN26030,Salary,2959.29,63192.98,Entertainment
+2022-01-05,TXN11796,Rent Payment,1145.21,11474.37,Utilities
+2022-01-06,TXN74242,Rent Payment,1319.76,36252.3,Entertainment
+2022-01-07,TXN10721,Insurance Premium,3330.26,57619.36,Medical
+2022-01-08,TXN48107,Medical Expenses,1686.33,59496.84,Loan Repayment
+2022-01-09,TXN43799,Gym Membership,3758.98,42878.26,Medical
+2022-01-10,TXN52299,Medical Expenses,4959.15,28766.03,Utilities
+2022-01-11,TXN59733,Loan Repayment,758.97,24208.68,Investment
+2022-01-12,TXN98571,Loan Repayment,4262.07,29400.04,Utilities
+2022-01-13,TXN15759,Utility Bill,2879.08,48963.7,Investment
+2022-01-14,TXN81002,Insurance Premium,2331.81,23148.75,Medical
+2022-01-15,TXN33120,Insurance Premium,4105.24,49323.03,Income
+2022-01-16,TXN43667,Gym Membership,857.31,43515.1,Income
+2022-01-17,TXN48722,Loan Repayment,4520.08,77651.21,Entertainment
+2022-01-18,TXN95550,Rent Payment,3914.22,22808.12,Income
+2022-01-19,TXN19643,Dining Out,4703.38,4789.78,Investment
+2022-01-20,TXN54078,Insurance Premium,3361.55,32028.24,Entertainment
+2022-01-21,TXN47966,Gym Membership,63.83,24744.84,Loan Repayment
+2022-01-22,TXN81706,Medical Expenses,4028.87,46496.9,Utilities
+2022-01-23,TXN34066,Gym Membership,2789.34,28667.25,Entertainment
+2022-01-24,TXN28849,Grocery Shopping,3709.12,95321.41,Investment
+2022-01-25,TXN86733,Utility Bill,900.63,22938.16,Income
+2022-01-26,TXN10482,Grocery Shopping,1733.35,22268.53,Expense
+2022-01-27,TXN41109,Loan Repayment,2694.72,49007.19,Utilities
+2022-01-28,TXN62719,Medical Expenses,3779.78,76275.9,Utilities
+2022-01-29,TXN14143,Insurance Premium,2106.31,32854.88,Medical
+2022-01-30,TXN24136,Investment Income,4952.48,56593.35,Income
+2022-01-31,TXN65031,Loan Repayment,2620.27,88544.53,Loan Repayment
+2022-02-01,TXN27570,Rent Payment,91.31,10139.28,Entertainment
+2022-02-02,TXN55138,Insurance Premium,3336.4,58707.04,Income
+2022-02-03,TXN22548,Grocery Shopping,2084.12,6661.56,Loan Repayment
+2022-02-04,TXN73219,Utility Bill,1013.47,49470.98,Medical
+2022-02-05,TXN56059,Dining Out,2334.0,25005.78,Medical
+2022-02-06,TXN58734,Rent Payment,1946.23,52198.21,Utilities
+2022-02-07,TXN22809,Grocery Shopping,213.22,22547.23,Expense
+2022-02-08,TXN67415,Investment Income,1776.47,38772.05,Loan Repayment
+2022-02-09,TXN55652,Salary,1753.51,20951.39,Loan Repayment
+2022-02-10,TXN34171,Gym Membership,4945.06,8183.89,Expense
+2022-02-11,TXN96128,Grocery Shopping,3799.58,4809.41,Entertainment
+2022-02-12,TXN40324,Rent Payment,865.95,17544.58,Medical
+2022-02-13,TXN68065,Utility Bill,535.43,13566.48,Income
+2022-02-14,TXN20849,Gym Membership,1922.35,20890.81,Expense
+2022-02-15,TXN54750,Investment Income,642.12,52299.4,Utilities
+2022-02-16,TXN26892,Loan Repayment,1143.81,89873.22,Entertainment
+2022-02-17,TXN99238,Utility Bill,3163.5,67496.46,Loan Repayment
+2022-02-18,TXN30256,Salary,4925.32,27977.99,Medical
+
