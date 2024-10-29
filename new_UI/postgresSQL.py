@@ -29,7 +29,7 @@ def fetch_conversation_by_thread(thread_id):
     try:
         cursor = conn.cursor()
         query = """
-        SELECT thread_id, metadata
+        SELECT thread_id, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
         FROM checkpoints
         WHERE thread_id = %s
         ORDER BY checkpoint_id ASC  -- Ensure 'checkpoint_id' is indexed for performance

@@ -1,114 +1,50 @@
-# %% [markdown]
-# # Agentic RAG for Finance Chatbot
-
-# %%
 import os
 from dotenv import load_dotenv
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.graph import StateGraph
+from chroma_db_init import initialize_chroma  # Import from combined Chroma and file manager
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_experimental.utilities.python import PythonREPL
-from langchain_core.tools import Tool
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from langchain_community.document_loaders.csv_loader import CSVLoader
+from session_manager import generate_new_session_id  # For generating new session IDs
 
-# %%
-# Load Environment Variables
+# Load environment variables
 load_dotenv()
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
-google_key = os.getenv("GOOGLE_API_KEY")
+DB_URI = os.getenv("Postgres_sql_URL")
 
-# %% [markdown]
-# # LLM Define
-
-# %%
+# Define your RAG workflow, state management, etc.
 llm = ChatGoogleGenerativeAI(
-    google_api_key = os.getenv("GOOGLE_API_KEY"),
+    google_api_key=os.getenv("GOOGLE_API_KEY"),
     model="gemini-1.5-pro",
     temperature=0,
     max_tokens=None,
-    timeout=None,
-    # other params...
 )
 
-# %% [markdown]
-# # CSV File Loader
-
-# %%
-file_path = (
-    "./dummy_data_for_llm_testing.csv"
-)
-
-loader = CSVLoader(file_path=file_path)
-data = loader.load()
-# print(data)
-
-# for d in data:
-#     print(d)
-
-# %% [markdown]
-# # Embedding The data
-
-# %%
-model_name = "intfloat/e5-large-v2"
-
-hf_embeddings = HuggingFaceEmbeddings(
-    model_name=model_name,
-)
-
-print(hf_embeddings)
-
-# %%
-persist_directory='./chroma_db'
-
-# %%
-from langchain_chroma import Chroma
-
-if persist_directory == "./chroma_db":
-    vectorstore = Chroma(persist_directory=persist_directory, embedding_function=hf_embeddings)
-else:
-    vectorstore = Chroma.from_documents(documents=data, persist_directory=persist_directory, embedding=hf_embeddings)
-
-# %%
-from langchain_chroma import Chroma
-vectorstore = Chroma.from_documents(documents=data, persist_directory=persist_directory, embedding=hf_embeddings)
-
-# %%
-retriever = vectorstore.as_retriever()
-
-# %%
-# retriever.invoke("what is my january budget of R&D")
-
-# %%
-# vectorAllData = vectorstore.get(include=['embeddings', 'documents', 'metadatas'])
-
-# %%
-# print(vectorAllData)
-
-# %% [markdown]
-# # retriever tool
-
-# %%
+from chroma_db_init import initialize_chroma, push_files_to_chroma
 from langchain.tools.retriever import create_retriever_tool
 
-retriever_tool = create_retriever_tool(
-    retriever,
-    "Financial_data_csv",
-    "This is the financial data of user in a csv format. If user want to know something about its financial data then search it and provide details to user.",
-)
+PERSIST_DIR = './chroma_db'
 
-tools = [retriever_tool]
+if os.path.exists(PERSIST_DIR):
+    pass
+else:
+    push_files_to_chroma(file_names = ["dummy_data_for_llm_testing.csv"])
 
-# %% [markdown]
-# # Agent State
-# We will define a graph.
-# 
-# A state object that it passes around to each node.
-# 
-# Our state will be a list of messages.
-# 
-# Each node in our graph will append to it.
+def initialize_retriever_tool():
+    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+    retriever = initialize_chroma().as_retriever()
 
-# %%
+    retriever_tool = create_retriever_tool(
+        retriever,
+        "Financial_data_csv",
+        "This is the financial data of user in a csv format. If user want to know something about its financial data then search it and provide details to user.",
+    )
+
+    global tools
+    tools = [retriever_tool]
+
+initialize_retriever_tool()
+
 from typing import Annotated, Sequence
 from typing_extensions import TypedDict
 
@@ -123,10 +59,6 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
 
 
-# %% [markdown]
-# # grade documents for Agentic RAG 
-
-# %%
 from typing import Annotated, Literal, Sequence
 from typing_extensions import TypedDict
 
@@ -134,14 +66,11 @@ from langchain import hub
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-# from langchain_openai import ChatOpenAI
 
 from pydantic import BaseModel, Field
 
 
 from langgraph.prebuilt import tools_condition
-
-### Edges
 
 
 def grade_documents(state) -> Literal["generate", "rewrite"]:
@@ -162,9 +91,6 @@ def grade_documents(state) -> Literal["generate", "rewrite"]:
         """Binary score for relevance check."""
 
         binary_score: str = Field(description="Relevance score 'yes' or 'no'")
-
-    # LLM
-    # model = ChatOpenAI(temperature=0, model="gpt-4-0125-preview", streaming=True)
 
     # LLM with tool and validation
     llm_with_tool = llm.with_structured_output(grade)
@@ -201,7 +127,6 @@ def grade_documents(state) -> Literal["generate", "rewrite"]:
         print(score)
         return "rewrite"
 
-# %%
 def rewrite(state):
     """
     Transform the query to produce a better question.
@@ -230,7 +155,6 @@ def rewrite(state):
     ]
 
     # Grader
-    # model = ChatOpenAI(temperature=0, model="gpt-4-0125-preview", streaming=True)
     response = llm.invoke(msg)
     return {"messages": [response]}
 
@@ -269,19 +193,6 @@ def generate(state):
     response = rag_chain.invoke({"context": docs, "question": question})
     return {"messages": [response]}
 
-
-# %% [markdown]
-# # To see what prompt looks like 
-
-# %%
-from langchain import hub
-print("*" * 20 + "Prompt[rlm/rag-prompt]" + "*" * 20)
-prompt = hub.pull("rlm/rag-prompt").pretty_print()  # Show what the prompt looks like
-
-# %% [markdown]
-# # Nodes
-
-# %%
 def agent(state):
     """
     Invokes the agent model to generate a response based on the current state. Given
@@ -301,17 +212,6 @@ def agent(state):
     # We return a list, because this will get added to the existing list
     return {"messages": [response]}
 
-# %% [markdown]
-# # Graph
-# Start with an agent, call_model
-# 
-# Agent make a decision to call a function
-# 
-# If so, then action to call tool (retriever)
-# 
-# Then call agent with the tool output added to messages (state)
-
-# %%
 from langgraph.graph import END, StateGraph, START
 from langgraph.prebuilt import ToolNode
 
@@ -320,7 +220,7 @@ workflow = StateGraph(AgentState)
 
 # Define the nodes we will cycle between
 workflow.add_node("agent", agent)  # agent
-retrieve = ToolNode([retriever_tool])
+retrieve = ToolNode(tools)
 workflow.add_node("retrieve", retrieve)  # retrieval
 workflow.add_node("rewrite", rewrite)  # Re-writing the question
 workflow.add_node(
@@ -350,98 +250,34 @@ workflow.add_conditional_edges(
 workflow.add_edge("generate", END)
 workflow.add_edge("rewrite", "agent")
 
-# %% [markdown]
-# # PostgresSQL with SupaBase.com
-
-# %% [markdown]
-# # Adding Memory to Agent Locally
-
-# %%
-# from langgraph.checkpoint.memory import MemorySaver
-
-# memory = MemorySaver()
-# # Compile
-# graph = workflow.compile(checkpointer=memory)
-
-# %% [markdown]
-# # Display flow
-
-# %%
-# from IPython.display import Image, display
-
-# try:
-#     display(Image(graph.get_graph(xray=True).draw_mermaid_png()))
-# except Exception:
-#     # This requires some extra dependencies and is optional
-#     pass
-
-# %% [markdown]
-# # Using Agent 
-
-# %%
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 DB_URI = os.getenv("Postgres_sql_URL")
 
-# async with AsyncPostgresSaver.from_conn_string(DB_URI) as checkpointer:
-#     await checkpointer.setup()
-#     graph = workflow.compile(checkpointer=checkpointer)
-#     config = {"configurable": {"thread_id": "1"}}
-    
-#     # Invoke the graph and capture the result
-#     res = await graph.ainvoke(
-#         {"messages": [("human", "Do you know my name?")]}, config
-#     )
-    
-#     # Print the result to the console
-#     print("Result from graph.ainvoke:")
-#     print(res)
-    
-#     # Print checkpoint tuples
-#     checkpoint_tuples = [c async for c in checkpointer.alist(config)]
-#     print("Checkpoint tuples:")
-#     for tuple_ in checkpoint_tuples:
-#         print(tuple_)
 
-
-# %%
 async def drop_prepared_statements(conn):
     async with conn.cursor() as cursor:
         await cursor.execute("DEALLOCATE ALL;")
 
-# async with AsyncPostgresSaver.from_conn_string(DB_URI) as checkpointer:
-#     # Use the underlying psycopg connection to drop existing prepared statements
-#     async with checkpointer.conn.transaction():
-#         await drop_prepared_statements(checkpointer.conn)
-    
-#     await checkpointer.setup()
-#     graph = workflow.compile(checkpointer=checkpointer)
-#     config = {"configurable": {"thread_id": "4"}}
-    
-#     res = await graph.ainvoke(
-#         {"messages": [("human", "What are Expenses in February for marketing department?")]}, config
-#     )
-    
-#     messages = res.get("messages", [])
-#     if messages:
-#         all_contents = [msg.content for msg in messages]  # access content directly from object
-#         print("All message contents:", all_contents)
 
-
-async def execute_workflow(input_message):
+# Function to execute the workflow with a specific thread ID (conversation context)
+async def execute_workflow(input_message, thread_id):
+    """Function to execute the workflow with the given input message and thread_id."""
     async with AsyncPostgresSaver.from_conn_string(DB_URI) as checkpointer:
-        # Use the underlying psycopg connection to drop existing prepared statements
         async with checkpointer.conn.transaction():
             await drop_prepared_statements(checkpointer.conn)
         await checkpointer.setup()
         graph = workflow.compile(checkpointer=checkpointer)
-        config = {"configurable": {"thread_id": "9"}}
+        # The `thread_id` here will ensure the state is saved and reused for that conversation.
+        config = {"configurable": {"thread_id": thread_id}}
         res = await graph.ainvoke({"messages": [("human", input_message)]}, config)
         return res
 
 
-
-# %%
-
-
-
+# Function to start a new conversation with a unique session ID
+def start_new_conversation(thread_id):
+    """Generates a new session/thread ID and starts a new conversation."""
+    thread_id = generate_new_session_id()  # Generate new unique session ID
+    print(f"New conversation started with thread ID: {thread_id}")
+    # This thread_id will be passed to execute_workflow when handling the conversation
+    return thread_id
