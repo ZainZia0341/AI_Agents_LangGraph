@@ -26,6 +26,18 @@ vectorstore = None
 
 file_document_ids = {}  # Dictionary to track file names and their associated document IDs
 
+def fetch_files_in_vector_db():
+    # Initialize connection to the vector database
+    vectorstore = Chroma(persist_directory=PERSIST_DIR, embedding_function = hf_embeddings)
+
+    # Retrieve only the metadata
+    vector_metadata = vectorstore.get(include=['metadatas'])
+
+    # Extract file names from the metadata
+    file_names = [metadata.get('file_name') for metadata in vector_metadata['metadatas'] if 'file_name' in metadata]
+
+    return file_names
+
 def initialize_chroma(splits=None):
     global vectorstore
     if splits:
@@ -129,6 +141,28 @@ def delete_vectors_from_chroma(file_name):
         document_ids = file_document_ids[file_name]
         vectorstore.delete(ids=document_ids)  # Delete the vectors associated with the file
         del file_document_ids[file_name]
+        print(f"Deleted vectors for {file_name}")
+    else:
+        print(f"No vectors found for {file_name}")
+
+
+def delete_vectors_from_chroma(file_name):
+    # Initialize connection to the vector database
+    vectorstore = Chroma(persist_directory=PERSIST_DIR, embedding_function=hf_embeddings)
+
+    # Retrieve only the metadata, including ids
+    vector_metadata = vectorstore.get(include=['metadatas'])
+
+    # Match the file name with metadata to get the corresponding ID
+    document_ids_to_delete = [
+        doc_id for doc_id, metadata in zip(vector_metadata['ids'], vector_metadata['metadatas'])
+        if metadata.get('file_name') == file_name
+    ]
+
+    # Check if we found document IDs for deletion
+    if document_ids_to_delete:
+        # Use document IDs to delete the specific documents
+        vectorstore.delete(ids=document_ids_to_delete)
         print(f"Deleted vectors for {file_name}")
     else:
         print(f"No vectors found for {file_name}")

@@ -2,7 +2,7 @@ import streamlit as st
 import asyncio
 from session_manager import generate_new_session_id
 from main import execute_workflow, initialize_retriever_tool
-from chroma_db_init import push_files_to_chroma
+from chroma_db_init import push_files_to_chroma, fetch_files_in_vector_db, delete_vectors_from_chroma
 from postgresSQL import (
     fetch_conversation_by_thread,
     fetch_all_conversations,
@@ -17,6 +17,8 @@ st.set_page_config(page_title="💬 Finance Chatbot with Agentic RAG", layout="w
 
 if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
+
+vector_db_files = fetch_files_in_vector_db()
 
 def update_key():
     st.session_state.uploader_key += 1
@@ -64,6 +66,19 @@ def display_selected_files():
             with cols[1]:
                 if st.button("❌", key=f"delete_file_{i}"):
                     st.session_state['uploaded_files'].pop(i)
+
+def display_vectordb_files():
+    if vector_db_files:
+            for i, file_name in enumerate(vector_db_files):
+                cols = st.columns([0.8, 0.2])  # Create columns for file name and delete button
+                with cols[0]:
+                    st.write(file_name)  # Display file name
+                with cols[1]:
+                    # Delete button for each file
+                    if st.button("❌", key=f"delete_vector_file_{i}"):
+                        delete_vectors_from_chroma(file_name)  # Call the delete function
+    else:
+            st.write("No files currently in the vector database.")
 
 # Sidebar content for managing conversations and files
 with st.sidebar:
@@ -148,18 +163,17 @@ with st.sidebar:
         if selected_files:
             # Push the selected files to Chroma for embedding
             vectorstore = push_files_to_chroma(selected_files)
-        st.write(f"Pushing the following files to RAG: {selected_files}")
         # Here, add the logic to handle pushing these files to RAG
         # Reset the checkboxes (uncheck all)
         initialize_retriever_tool()
         uncheck()
+        # Display files currently in the vector database under "Push to RAG"
 
-    if st.button("Remove from RAG"):
-        selected_files = [file_name for file_name, selected in st.session_state['selected_files'].items() if selected]
-        st.write(f"Removing the following files to RAG: {selected_files}")
-        # Here, add the logic to handle pushing these files to RAG
-        # Reset the checkboxes (uncheck all)
-        uncheck()
+    st.subheader("Files in Vector Database")    
+    # Fetch the files in the vector database and display them with delete buttons
+    vector_db_files = fetch_files_in_vector_db()  # Call the function to get file names
+
+    display_vectordb_files()        
 
 # Show conversation messages for the currently active thread
 if 'current_thread_id' in st.session_state and st.session_state['current_thread_id']:
