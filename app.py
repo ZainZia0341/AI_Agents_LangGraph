@@ -175,43 +175,49 @@ with st.sidebar:
 
     display_vectordb_files()        
 
-# Show conversation messages for the currently active thread
+def display_conversation_streamlit(conversation_data):
+    """Display conversation in Streamlit using human and assistant messages."""
+    user_message = None
+    final_assistant_message = None
+
+    for checkpoint in conversation_data:
+        metadata = checkpoint['metadata']
+        writes = metadata.get("writes", {})
+
+        if writes is not None:  # Add this check to ensure 'writes' is not None
+            if '__start__' in writes:
+                user_message = writes['__start__']['messages'][0][1]
+                with st.chat_message("human"):
+                    st.write("H", user_message)
+
+            if 'generate' in writes:
+                final_assistant_message = writes['generate']['messages'][0]
+                with st.chat_message("assistant"):
+                    st.write("W tool" ,final_assistant_message)
+            elif 'agent' in writes:
+                if writes['agent']['messages'][0]['kwargs'].get('content') is not "":
+                    if 'messages' in writes['agent']:
+                        final_assistant_message = writes['agent']['messages'][0]['kwargs'].get('content', 'No content available')
+                        with st.chat_message("assistant"):
+                            st.write("With tool" ,final_assistant_message)
+
+# Load conversations from PostgreSQL on page load
+if 'conversations_loaded' not in st.session_state:
+    conversations = fetch_all_conversations()
+    st.session_state['conversations'] = {
+        conv['thread_id']: fetch_conversation_by_thread(conv['thread_id']) for conv in conversations
+    }
+    st.session_state['conversations_loaded'] = True
+
+# Select a conversation to display
 if 'current_thread_id' in st.session_state and st.session_state['current_thread_id']:
     thread_id = st.session_state['current_thread_id']
     st.subheader(f"Conversation: {thread_id[:8]}")
-
-    # Display messages from the currently active conversation stored in session state
-    for message in st.session_state['conversations'].get(thread_id, []):
-        metadata = message.get('metadata', {})
-        writes = metadata.get('writes', {})
-
-        # Check if writes is not None
-        if writes:
-            # Display user messages if present
-            user_start = writes.get('__start__')
-            if user_start and 'messages' in user_start:
-                for user_msg in user_start['messages']:
-                    if isinstance(user_msg, list) and len(user_msg) == 2:
-                        role, content = user_msg
-                        content = content or "No content available"
-                        with st.chat_message(role):
-                            st.write(content)
-
-            # Display assistant messages if present
-            agent_writes = writes.get('agent')
-            if agent_writes and 'messages' in agent_writes:
-                for assistant_msg in agent_writes['messages']:
-                    content = assistant_msg.get('kwargs', {}).get('content', "No content available")
-                    with st.chat_message("assistant"):
-                        st.write(content)
-        else:
-            # Log or display a message if writes is null, for easier debugging
-            # st.write("No messages available in this entry.")
-            pass
+    conversation_data = st.session_state['conversations'].get(thread_id, [])
+    display_conversation_streamlit(conversation_data)
 
 # Handle new messages from the user
 prompt = st.chat_input("Type your message here...")
-
 if prompt:
     thread_id = st.session_state.get('current_thread_id', None)
     if thread_id:
@@ -237,8 +243,6 @@ if prompt:
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response = asyncio.run(execute_workflow(prompt, thread_id))
-
-                # Extract the assistant's message from the response
                 assistant_message_content = response["messages"][-1].content
 
                 # Structure the assistant's message

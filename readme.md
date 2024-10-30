@@ -1,66 +1,53 @@
-# Multi-Agent LLM Application Using LangGraph
+# Agentic AI-Powered Finance Chatbot with RAG Workflow
 
-This project leverages **LangGraph** to build a multi-agent network where each agent specializes in handling different types of user queries. The agents use various tools such as Tavily Search, Python REPL, Weather API, Alpha Vantage, and Eleven Labs to provide accurate and diverse responses.
+## Introduction
 
-## Overview
+This project leverages **LangGraph** to build an Agentic AI chatbot using **Retrieval-Augmented Generation (RAG)**. The chatbot is designed to handle user queries by using a multi-step agent workflow to retrieve and process data from CSV files. It uses Google’s Gemini 1.5 Pro for high-quality responses and is optimized for structured interactions. This application is ideal for users who want contextual and data-driven responses.
 
-This project is designed as a **multi-agent LLM (Large Language Model)** application where each agent is responsible for handling specific tasks, such as:
-- Searching the web for relevant information
-- Fetching weather data
-- Performing Python code execution
-- Fetching financial data
-- Converting text to speech
-
-The agents are part of a **divide-and-conquer** approach where each specialized agent solves part of the problem and collaborates with other agents to generate the final response.
-
-## Features
-
-- **Retriever-Augmented Generation (RAG)**: Uses retrieval-based methods for grounded answers.
-- **Multiple Tool Integration**: Utilizes Tavily Search, Python REPL, Alpha Vantage, Weather API, and Eleven Labs.
-- **LangGraph Checkpointing**: Saves chat history during the conversation.
-- **PostgreSQL Integration**: For long-term chat history storage.
-
-## Setup
+## How to Run on Your PC
 
 ### Prerequisites
 
-Make sure you have the following installed:
+Ensure you have the following installed:
 - Python 3.9+
 - PostgreSQL (for chat history storage)
-- API keys for services such as OpenAI, OpenWeatherMap, Alpha Vantage, and Eleven Labs
+- API keys for services like Google API for LLM and other credentials as needed.
 
-### Installing Dependencies
+### Steps to Set Up
 
-1. Clone the repository:
-
-    ```bash
-    git clone https://github.com/your-username/multi-agent-llm-app.git
-    ```
-
-2. Navigate to the project directory:
+1. **Clone the Repository**:
 
     ```bash
-    cd multi-agent-llm-app
+    git clone https://github.com/your-username/finance-agent-chatbot.git
     ```
 
-3. Install the required packages:
+2. **Navigate to the Project Directory**:
 
     ```bash
-    pip install -U langchain langchain_openai langsmith pandas langgraph langchain_core elevenlabs
+    cd finance-agent-chatbot
     ```
 
-4. Set up your environment variables:
+3. **Install the Required Packages**:
 
     ```bash
-    export OPENAI_API_KEY="your-openai-api-key"
-    export OPENWEATHER_API_KEY="your-openweather-api-key"
-    export ALPHA_VANTAGE_KEY="your-alpha-vantage-api-key"
-    export ELEVEN_LABS_KEY="your-eleven-labs-api-key"
+    pip install -r requirements.txt
     ```
 
-5. Configure PostgreSQL:
+4. **Set Up Environment Variables**:
 
-    Set up a PostgreSQL database to store chat history.
+    Create a `.env` file in the root directory with the following content:
+
+    ```plaintext
+    LANGCHAIN_API_KEY="your-langchain-api-key"
+    GOOGLE_API_KEY="your-google-api-key"
+    Postgres_sql_URL="your-postgresql-url"
+    ```
+
+    Replace each placeholder with your actual credentials.
+
+5. **Configure PostgreSQL**:
+
+    Create a PostgreSQL database to store chat history and metadata.
 
     ```sql
     CREATE DATABASE chat_history;
@@ -68,28 +55,106 @@ Make sure you have the following installed:
     GRANT ALL PRIVILEGES ON DATABASE chat_history TO yourusername;
     ```
 
-    Modify `config.py` to include your PostgreSQL credentials.
+6. **Run the Application**:
 
-## Project Structure
+    Launch the Streamlit app with the following command:
 
-```plaintext
-multi-agent-llm-app/
+    ```bash
+    streamlit run app/app.py
+    ```
+
+## Directory Structure
+
+
+LangGraph_Agents_Nodes/
 ├── agents/
-│   ├── rag_agent.py             # Handles retriever-augmented generation
-│   ├── weather_agent.py         # Handles weather queries
-│   ├── financial_agent.py       # Handles financial data queries
-│   ├── code_execution_agent.py  # Handles Python code execution
-│   ├── text2speech_agent.py     # Handles text-to-speech conversion
+│   ├── main.py                # Main agent logic for handling queries
 ├── tools/
-│   ├── tavily_search.py         # Tavily search integration
-│   ├── openweather.py           # OpenWeatherMap API integration
-│   ├── alpha_vantage.py         # Alpha Vantage API integration
-│   └── python_repl.py           # Python REPL tool
-├── utils/
-│   ├── db.py                    # Database utility for chat history
-├── config.py                    # Configuration for API keys and database
-├── app.py                       # Main application logic
-├── README.md                    # Project README
-└── requirements.txt             # Python dependencies
+│   ├── chroma_db_init.py      # Initializes and manages ChromaDB for vector storage
+│   ├── postgresSQL.py         # PostgreSQL interaction for conversation and file metadata
+├── app/
+│   ├── app.py                 # Streamlit UI for user interaction
+│   ├── app.py_new_UI          # Alternate or updated UI version (if applicable)
+├── uploaded_files/            # Directory for storing uploaded CSV files
+├── your_persist_directory/    # Directory for ChromaDB persistence (vector storage)
+├── .env                       # Environment variables (hidden in Git)
+├── .gitignore                 # Git ignore file
+├── README.md                  # Project README
+├── requirements.txt           # Python dependencies
+├── testing.ipynb              # Jupyter notebook for testing or experimentation
+├── dummy_data_for_llm_testing.csv   # Sample data for LLM testing
+├── zain_financial_data.csv    # Example CSV file for financial data queries
+└── Multi_Tool_Agent_ENV_3.9.0 # Virtual environment or environment configuration
 
 
+# Working Flow of Agent in Action
+
+The agent in this chatbot application follows a structured workflow to ensure relevant responses. Here’s how it works:
+
+Agent Decision: The agent assesses the user’s question and determines the next step.
+Retrieve: If additional information is required, the agent retrieves data from the uploaded CSV file.
+Rewrite: If the retrieved data isn’t fully relevant, the agent refines the query to improve accuracy.
+Generate: After confirming relevance, the agent generates a response.
+End: The workflow concludes by delivering a tailored answer to the user.
+This intelligent decision-making process allows the agent to adapt dynamically to different types of queries and ensures responses are always based on accurate, context-driven information.
+
+# Main Technologies Used in App
+
+LLM Model: Powered by Google’s Gemini 1.5 Pro for high-quality responses.
+
+LangChain & LangGraph: Manages the Agent workflow and state handling, allowing for seamless transitions and efficient query processing.
+
+ChromaDB: Vector storage for efficient data retrieval, enabling the agent to pull contextually relevant information.
+
+PostgreSQL: Used for storing conversation threads and file metadata, ensuring continuity across sessions.
+
+Streamlit: Provides an intuitive and interactive UI for users to engage with the chatbot, manage files, and view conversation history.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+🚀 Introducing the Agentic AI-Powered Chatbot with RAG Workflow 🚀
+
+🔍 Built with Agentic AI, this chatbot project leverages advanced technologies to handle complex queries by retrieving and processing data from user-provided CSV files. The intelligent agent flow ensures every interaction is relevant and efficient.
+
+⚙️ Agent Workflow:
+Agent Decision: The agent assesses the user’s question and determines the next step.
+Retrieve: When additional information is needed, it fetches data from the uploaded CSV file.
+Rewrite: If the retrieved data isn’t fully relevant, the agent refines the query for improved accuracy.
+Generate: After verifying relevance, the agent crafts an accurate response.
+End: The workflow concludes with a targeted answer.
+🌐 Key Features & Technologies:
+CSV File Upload: Upload individual CSV files for each conversation, keeping data organized.
+File Management: Easily delete files from the database when they’re no longer needed.
+State-Persisting Conversations: Each conversation thread is independent, allowing for seamless interactions.
+🛠️ Tech Stack:
+LLM Model: Powered by Google’s Gemini 1.5 Pro for high-quality responses.
+LangChain & LangGraph: Manages the Agent workflow and state handling.
+ChromaDB: Vector storage for efficient data retrieval.
+PostgreSQL: Handles conversation threads and file metadata for continuity.
+Streamlit: Provides an intuitive and interactive UI for users to engage with the chatbot.
+💡 Crafted for Intelligent Interactions: This chatbot combines RAG (Retrieval-Augmented Generation) with a flexible agentic workflow, making it adaptable and responsive to user data.
+
+💼 Check out the code and explore more! [GitHub link here]
+
+🔗 #AgenticAI #RAG #Chatbot #AI #MachineLearning #LangChain #LangGraph #ChromaDB #PostgreSQL #Streamlit
