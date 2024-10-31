@@ -62,7 +62,7 @@ Ensure you have the following installed:
 
 ## Directory Structure
 
-```plaintext
+```
 LangGraph_Agents_Nodes/
 ├── main.py                    # Main agent logic for handling queries
 ├── chroma_db_init.py          # Initializes and manages ChromaDB for vector storage
@@ -75,7 +75,8 @@ LangGraph_Agents_Nodes/
 ├── requirements.txt           # Python dependencies
 ├── testing.ipynb              # Jupyter notebook for testing or experimentation
 ├── dummy_data_for_llm_testing.csv   # Sample data for LLM testing
-...
+
+```
 
 ## Working Flow of Agent in Action
 
